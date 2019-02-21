@@ -70,8 +70,9 @@ else {
 # Copy template from share to default VHDx path
 function Create_Test_VM ([string] $encrypted_vhd)
 {
+    ">> Create_Test_VM : " + [DateTime]::Now
     # Test dependency VHDx path
-    $sts = Test-Path $encrypted_vhd
+    Test-Path $encrypted_vhd
     if (-not $?) {
         return $false
     }
@@ -85,7 +86,7 @@ function Create_Test_VM ([string] $encrypted_vhd)
     }
 
     # Make a new VM
-    $newVm = New-VM -Name 'Shielded_PRE-TDC' -Generation 2 -VHDPath $destinationVHD -MemoryStartupBytes 4096MB -SwitchName 'External'
+    New-VM -Name 'Shielded_PRE-TDC' -Generation 2 -VHDPath $destinationVHD -MemoryStartupBytes 4096MB -SwitchName 'External'
     if (-not $?) {
         return $false
     }
@@ -97,6 +98,7 @@ function Create_Test_VM ([string] $encrypted_vhd)
 # Attach decryption drive to the test VM
 function AttachDecryptVHDx ([string] $decrypt)
 {
+    ">> AttachDecryptVHDx ( $decrypt ) : " + [DateTime]::Now
     $rootDir = $pwd.Path
     # Use script to attach decryption VHDx
     $sts = ./setupScripts/Shielded_Add_DecryptVHD.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams "rootDir=${rootDir}; decrypt_vhd_folder=${decrypt}"
@@ -116,6 +118,7 @@ function AttachDecryptVHDx ([string] $decrypt)
 # Install lsvm
 function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path)
 {
+    ">> Install_lsvm ( $sshKey, $ipv4, $lsvm_folder_path ) : " + [DateTime]::Now
     $rootDir = $pwd.Path
 
     # Get KVP data
@@ -137,6 +140,7 @@ function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path
 # Attach decryption drive to the test VM
 function DettachDecryptVHDx
 {
+    ">> DettachDecryptVHDx : " + [DateTime]::Now
     $rootDir = $pwd.Path
     # Use script to attach decryption VHDx
     $sts = ./setupScripts/Shielded_Remove_DecryptVHD.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams "rootDir=${rootDir}; decrypt_vhd_folder=${decrypt}"
@@ -149,6 +153,7 @@ function DettachDecryptVHDx
 
 function Verify_script ([string] $ipv4, [string] $sshKey, [string] $scriptName)
 {
+    ">> Verify_script( $ipv4, $sshKey, $scriptName ) : " + [DateTime]::Now
     # Run test script
     $retVal = SendCommandToVM $ipv4 $sshKey "bash ${scriptName} && cat state.txt"
     if (-not $retVal) {
@@ -168,6 +173,7 @@ function Verify_script ([string] $ipv4, [string] $sshKey, [string] $scriptName)
 
 function Verify_not_encrypted ([string]$ipv4, [string]$sshKey, [string]$rhel_folder_path, [string]$sles_folder_path, [string]$ubuntu_folder_path, [string]$lsvm_folder_path)
 {
+    ">> Verify_not_encrypted( $ipv4, $sshKey, $rhel_folder_path, $sles_folder_path, $ubuntu_folder_path, $lsvm_folder_path ) : " + [DateTime]::Now
     $rootDir = $pwd.Path
     # Run test script
     $sts = ./setupScripts/Shielded_not_encrypted_vhd.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' `
@@ -181,6 +187,7 @@ function Verify_not_encrypted ([string]$ipv4, [string]$sshKey, [string]$rhel_fol
 
 function Verify_passphrase_noSpace ([string] $ipv4, [string] $sshKey, [string] $scriptName, [string] $change_passphrase, [string] $fill_disk)
 {
+    ">> Verify_passphrase_noSpace ( $ipv4, $sshKey, $scriptName, $change_passphrase, $fill_disk ) : " + [DateTime]::Now
     # Append data to constants.sh
     $retVal = SendCommandToVM $ipv4 $sshKey "echo 'change_passphrase=${change_passphrase}' >> constants.sh"
     $retVal = SendCommandToVM $ipv4 $sshKey "echo 'fill_disk=${fill_disk}' >> constants.sh "
@@ -204,6 +211,7 @@ function Verify_passphrase_noSpace ([string] $ipv4, [string] $sshKey, [string] $
 
 function Prepare_VM ([string] $ipv4, [string] $sshKey)
 {
+    ">> Prepare_VM ( $ipv4, $sshKey ) : " + [DateTime]::Now
 	$rootDir = $pwd.Path
 	
     # Run test script

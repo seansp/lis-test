@@ -30,11 +30,13 @@ param(
     [Parameter(Mandatory=$true)]
     [string] $Password
 )
+	">> Create-CredentialObject ( $User, $Password ) : " + [DateTime]::Now
     return New-Object System.Management.Automation.PSCredential($User, (ConvertTo-SecureString $Password -AsPlainText -Force))
 }
 
 function Generate-PDKFile ([string] $shielding_type, [string] $shareName)
 {
+	">> Generate-PDKFile ( $shielding_type, $shareName ) : " + [DateTime]::Now
     $owner = Get-HgsGuardian -Name 'Owner'
 	if (-not $owner){
 		return $false
@@ -76,6 +78,7 @@ function Generate-PDKFile ([string] $shielding_type, [string] $shareName)
 # Copy VHD to given share
 function Upload_File ([string] $fileName, [string] $share_name)
 {
+	">> Upload_File ( $fileName, $share_name ) : " + [DateTime]::Now
 	if (-not (Test-Path $share_name)) {
 		return $false
 	}
@@ -91,6 +94,7 @@ function Upload_File ([string] $fileName, [string] $share_name)
 # Copy template from share to default VHDx path
 function Copy_template_from_share ([string] $share_name)
 {
+	">> Copy_template_from_share ( $share_name ) : " + [DateTime]::Now
 	# Make a copy of the encypted VHDx for testing only
 	$destinationVHD = $defaultVhdPath + "LSVM-PRO_test.vhdx"
     Copy-Item -Path $(Get-ChildItem $share_name -Filter *PRO.vhdx).FullName -Destination $destinationVHD -Force
@@ -103,6 +107,7 @@ function Copy_template_from_share ([string] $share_name)
 # Create dependency VM
 function CreateVM ([string]$dep_vhd)
 {
+	">> CreateVM ( $dep_vhd ) : " + [DateTime]::Now
 	# Test dependency VHDx path
     $sts = Test-Path $dep_vhd
     if (-not $?) {
@@ -147,6 +152,7 @@ function CreateVM ([string]$dep_vhd)
 # Modify VSC on the template
 function Modify_VSC ([string] $sshKey, [string] $dep_IP, [string] $shareName)
 {
+	">> Modify_VSC ( $sshKey, $dep_IP, $shareName ) : " + [DateTime]::Now
 	# Mount the template
 	$sts =  echo y | .\bin\plink.exe -i ssh\$sshKey root@${dep_IP} "mkdir lsvmefi && mount /dev/sdb1 lsvmefi"
 	
@@ -177,6 +183,7 @@ function Modify_VSC ([string] $sshKey, [string] $dep_IP, [string] $shareName)
 # Modify boot partition on the template
 function Modify_boot_partition ([string] $sshKey, [string] $dep_IP, [string] $shareName)
 {
+	">> Modify_boot_partition ( $sshKey, $dep_IP, $sharedName ) : " + [DateTime]::Now
 	# Unlock sdb2 - boot partition
 	$sts =  echo y | .\bin\plink.exe -i ssh\$sshKey root@${dep_IP} "yes passphrase | cryptsetup luksOpen /dev/sdb2 encrypted_boot"
 	# Mount the template
@@ -209,6 +216,7 @@ function Modify_boot_partition ([string] $sshKey, [string] $dep_IP, [string] $sh
 # Modify root partition on the template
 function Modify_root_partition ([string] $sshKey, [string] $dep_IP, [string] $shareName)
 {
+	">> Modify_root_partition ( $sshKey, $dep_IP, $shareName ) : " + [DateTime]::Now
 	# Unlock sdb3 - root partition
 	$sts =  echo y | .\bin\plink.exe -i ssh\$sshKey root@${dep_IP} "yes passphrase | cryptsetup luksOpen /dev/sdb3 encrypted_root"
 	
@@ -248,6 +256,7 @@ function Modify_root_partition ([string] $sshKey, [string] $dep_IP, [string] $sh
 # Copy template and PDK to the Guarded host
 function Copy_Files_to_GH ([string] $GH_IP, [string] $share_path, $gh_creds, $share_creds)
 {	
+	">> Copy_Files_to_GH ( $GH_IP, $share_path, $gh_creds, $share_creds ) : " + [DateTime]::Now
 	$copy_files_cmd = Invoke-Command $GH_IP -Credential $gh_creds -ErrorAction SilentlyContinue -ScriptBlock { `
 		$sts = $true
 		$defaultVhdPath = $(Get-VMHost).VirtualHardDiskPath
@@ -276,6 +285,7 @@ function Copy_Files_to_GH ([string] $GH_IP, [string] $share_path, $gh_creds, $sh
 
 function Provision_VM ([string] $GH_IP, $gh_creds, [string] $change_fsk)
 {
+	">> Provision_VM ( $GH_IP, $gh_creds, $change_fsk ) : " + [DateTime]::Now
 	$provision_vm_cmd = Invoke-Command $GH_IP -Credential $gh_creds -ScriptBlock { `
 		# Prepare files
 		$sts = $true
@@ -387,6 +397,7 @@ function Provision_VM ([string] $GH_IP, $gh_creds, [string] $change_fsk)
 
 function Get_VM_ipv4 ([string] $GH_IP, $gh_creds)
 {
+	">> Get_VM_ipv4 ( $GH_IP, $gh_creds ) : " + [DateTime]::Now
 	$get_ipv4_cmd = Invoke-Command $GH_IP -Credential $gh_creds -ScriptBlock { `
 		$waitTimeOut = 200
 		while ($waitTimeOut -gt 0) {
@@ -408,6 +419,7 @@ function Get_VM_ipv4 ([string] $GH_IP, $gh_creds)
 
 function Verify_provisioned_VM([string]$vm_ipv4, [string]$sshKey)
 {
+	">> Verify_provisioned_VM ( $vm_ipv4, $sshKey ) : " + [DateTime]::Now
 	# Command that verifies call traces in system logs
 	$cmd_trace = '[[ -f "/var/log/syslog" ]] && logfile="/var/log/syslog" || logfile=/var/log/messages && cat $logfile | grep Call'
 	
@@ -419,6 +431,7 @@ function Verify_provisioned_VM([string]$vm_ipv4, [string]$sshKey)
 
 function Clean_provisioned_VM ([string] $GH_IP, $gh_creds)
 {
+	">> Clean_provisioned_VM ( $GH_IP, $gh_creds ) : " + [DateTime]::Now
 	$clean_cmd = Invoke-Command $GH_IP -Credential $gh_creds -ScriptBlock { `
 		$sts = $true
 		# Clean up
