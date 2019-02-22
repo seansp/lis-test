@@ -126,6 +126,8 @@ if (-not $?) {
 }
 
 # Send lsvmtools to VM
+Write-Host "\n#1#$sshKey\n#2#${ipv4}\n"
+
 $fileExtension = .\bin\plink.exe -i ssh\$sshKey root@${ipv4} "dos2unix utils.sh && . utils.sh && GetOSVersion && echo `$os_PACKAGE"
 Write-Output "$fileExtension file will be sent to VM" | Tee-Object -Append -file $summaryLog
 

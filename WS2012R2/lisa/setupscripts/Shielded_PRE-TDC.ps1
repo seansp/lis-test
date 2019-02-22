@@ -121,6 +121,8 @@ function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path
     Write-Host ">> Install_lsvm ( $sshKey, $ipv4, $lsvm_folder_path ) : $([DateTime]::Now)"
     $rootDir = $pwd.Path
 
+    Write-Host "##rootDir = $rootDir##"
+
     # Get KVP data
     $Vm = Get-WmiObject -ComputerName 'localhost' -Namespace root\virtualization\v2 -Query "Select * From Msvm_ComputerSystem Where ElementName='Shielded_PRE-TDC'"
 	$Kvp = Get-WmiObject -ComputerName 'localhost' -Namespace root\virtualization\v2 -Query "Associators of {$Vm} Where AssocClass=Msvm_SystemDevice ResultClass=Msvm_KvpExchangeComponent"
