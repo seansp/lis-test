@@ -27,14 +27,6 @@ Param(
     [ValidateNotNullorEmpty()]
     [String]$sharePath,
     
-    [Parameter(Mandatory = $true,Position = 0,HelpMessage = 'User name which has access to share')]
-    [ValidateNotNullorEmpty()]
-    [String]$shareUser,
-    
-    [Parameter(Mandatory = $true,Position = 0,HelpMessage = 'Account password which has access to share')]
-    [ValidateNotNullorEmpty()]
-    [String]$sharePassword,
-    
     [Parameter(Mandatory = $true,Position = 0,HelpMessage = 'SSH key to access the VM')]
     [ValidateNotNullorEmpty()]
     [String]$sshKey,
