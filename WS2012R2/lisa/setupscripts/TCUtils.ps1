@@ -724,6 +724,9 @@ function SendFileToVM([String] $ipv4, [String] $sshkey, [string] $localFile, [st
         SendFileToVM "192.168.1.101" "lisa_id_rsa.ppk" "C:\test\test.dat" "test.dat"
     #>
 
+
+    Write-Host "##::SendFileToVM( $ipv4, $sshKey, $localFile, $remoteFile, $ChangeEOL ) : $([DateTime]::Now)" 
+
     if (-not $ipv4)
     {
         Write-Error -Message "ipv4 is null" -Category InvalidData -ErrorAction SilentlyContinue
