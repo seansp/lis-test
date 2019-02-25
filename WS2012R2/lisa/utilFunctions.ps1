@@ -1353,6 +1353,16 @@ function SendFileToVM([System.Xml.XmlElement] $vm, [string] $localFile, [string]
         $recurse = "-r"
     }
 
+    if( Test-Path -Path $localFile )
+    {
+        Write-Host "## Test-Path - $localFile"
+        $fso = New-Object -ComObject Scripting.FileSystemObject
+        $localFile = $fso.GetFile( $localFile )
+        $localFile = $localFile.ShortName
+        Write-Host "## After Short-Name - $localFile"
+    }
+
+
     $process = Start-Process bin\pscp -ArgumentList "-i ssh\${sshKey} ${localFile} root@${hostname}:${remoteFile}" `
 	 -PassThru -NoNewWindow -Wait -redirectStandardOutput lisaOut_$($vm.vmName).tmp -redirectStandardError lisaErr_$($vm.vmName).tmp
     if ($process.ExitCode -eq 0)
