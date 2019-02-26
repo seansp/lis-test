@@ -99,14 +99,13 @@ else {
     return $false
 }
 
-$summaryLog = "c:\users\public\shielded_install_lsvm_summary.log"
-del $summaryLog -ErrorAction SilentlyContinue
-Write-Output "This script covers test case: ${TC_COVERED}" | Tee-Object -Append -file $summaryLog
+$persistentSummaryLog = "c:\users\public\shielded_install_lsvm_summary.log"
+Write-Output "This script covers test case: ${TC_COVERED}" | Tee-Object -Append -file $persistentSummaryLog
 
 # Copy lsvmtools to root folder
 Test-Path $lsvm_folder
 if (-not $?) {
-    Write-Output "Error: Folder $lsvm_folder does not exist!" | Tee-Object -Append -file $summaryLog
+    Write-Output "Error: Folder $lsvm_folder does not exist!" | Tee-Object -Append -file $persistentSummaryLog
     return $false
 }
 
@@ -115,20 +114,20 @@ $deb = Get-ChildItem $lsvm_folder -Filter *.deb
 
 Copy-Item -Path $rpm.FullName -Destination . -Force
 if (-not $?) {
-    Write-Output "Error: Failed to copy rpm from $lsvm_folder to $rootDir" | Tee-Object -Append -file $summaryLog
+    Write-Output "Error: Failed to copy rpm from $lsvm_folder to $rootDir" | Tee-Object -Append -file $persistentSummaryLog
     return $false
 }
 
 Copy-Item -Path $deb.FullName -Destination . -Force
 if (-not $?) {
-    Write-Output "Error: Failed to copy deb from $lsvm_folder to $rootDir" | Tee-Object -Append -file $summaryLog
+    Write-Output "Error: Failed to copy deb from $lsvm_folder to $rootDir" | Tee-Object -Append -file $persistentSummaryLog
     return $false
 }
 
 # Send lsvmtools to VM
 
 $fileExtension = .\bin\plink.exe -i ssh\$sshKey root@${ipv4} "dos2unix utils.sh && . utils.sh && GetOSVersion && echo `$os_PACKAGE"
-Write-Output "$fileExtension file will be sent to VM" | Tee-Object -Append -file $summaryLog
+Write-Output "$fileExtension file will be sent to VM" | Tee-Object -Append -file $persistentSummaryLog
 
 $filePath = Get-ChildItem * -Filter *.${fileExtension}
 Write-Host "##RelativeSend .\${$filePath.Name}"
@@ -143,39 +142,39 @@ if ($fileExtension -eq "rpm") {
 }
 
 if (-not $?) {
-    Write-Output "Error: Failed to install $fileExtension file" | Tee-Object -Append -file $summaryLog
+    Write-Output "Error: Failed to install $fileExtension file" | Tee-Object -Append -file $persistentSummaryLog
     return $false
 } 
 else {
-    Write-Output "lsvmtools was successfully installed!" | Tee-Object -Append -file $summaryLog
+    Write-Output "lsvmtools was successfully installed!" | Tee-Object -Append -file $persistentSummaryLog
 }
 
 Start-sleep -s 3
 
 # Stopping VM to take a checkpoint
-Write-Output "Waiting for VM $vmName to stop..." | Tee-Object -Append -file $summaryLog
+Write-Output "Waiting for VM $vmName to stop..." | Tee-Object -Append -file $persistentSummaryLog
 if ((Get-VM -ComputerName $hvServer -Name $vmName).State -ne "Off") {
-    Write-Object "Turning off... Server: $hvServer VM: $vmName" | Tee-Object -Append -file $summaryLog
+    Write-Object "Turning off... Server: $hvServer VM: $vmName" | Tee-Object -Append -file $persistentSummaryLog
     Stop-VM -ComputerName $hvServer -Name $vmName -Force -Confirm:$false
 }
 
 # Waiting until the VM is off
 if (-not (WaitForVmToStop $vmName $hvServer 300)) {
-    Write-Output "Error: Unable to stop VM" | Tee-Object -Append -file $summaryLog
+    Write-Output "Error: Unable to stop VM" | Tee-Object -Append -file $persistentSummaryLog
     return $False
 }
 
-Write-Output "Removing passthough disk." | Tee-Object -Append -file $summaryLog
+Write-Output "Removing passthough disk." | Tee-Object -Append -file $persistentSummaryLog
 # Remove Passthrough disk
 Remove-VMHardDiskDrive -ComputerName $hvServer -VMName $vmName -ControllerType SCSI -ControllerNumber 0 -ControllerLocation 1
 
 # Take checkpoint
 Checkpoint-VM -Name $vmName -SnapshotName $snapshot -ComputerName $hvServer
 if (-not $?) {
-    Write-Output "Error taking snapshot!" | Tee-Object -Append -file $summaryLog
+    Write-Output "Error taking snapshot!" | Tee-Object -Append -file $persistentSummaryLog
     return $False
 }
 else {
-    Write-Output "Checkpoint was created" | Tee-Object -Append -file $summaryLog
+    Write-Output "Checkpoint was created" | Tee-Object -Append -file $persistentSummaryLog
     return $true
 }

@@ -112,6 +112,14 @@ Describe "Preparation tasks for LSVM-PRE testing" {
 
             Install_lsvm $sshKey $ipv4 $lsvm_folder_path | Should be $true
 
+            $sometext = Get-Content "c:\users\public\shielded_install_lsvm_summary.log"
+            foreach( $element in $sometext )
+            {
+                Write-Host "SOMETEXT: $element"
+            }
+
+
+
             DettachDecryptVHDx | Should be $true
         }
     } 
