@@ -131,11 +131,19 @@ function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path
 	$kvpDict | Export-CliXml kvp_results.xml -Force
 	
     # Install LSVM script
-    $sts = ./setupScripts/Shielded_install_lsvm.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams "rootDir=${rootDir}; lsvm_folder_path=${lsvm_folder_path}; ipv4=${ipv4}; sshKey=${sshKey}; snapshotName=ICABase"
+    Write-Host "##"
+    Write-Host "##Shielded_install_psvm.ps1 ::Shielded_PRE-TDC hvServer=localhost .. $testParams";
+    Write-Host "##"
+    $testParams = "rootDir=${rootDir}; lsvm_folder_path=${lsvm_folder_path}; ipv4=${ipv4}; sshKey=${sshKey}; snapshotName=ICABase"
+    $sts = ./setupScripts/Shielded_install_lsvm.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams $testParams
     if (-not $sts[-1]) {
+        Write-Host "##ReturningFALSE"
         return $false
     }
-
+    foreach( $element in $sts )
+    {
+        Write-Host "##STS: $element"
+    }
     return $sts[-1]
 }
 

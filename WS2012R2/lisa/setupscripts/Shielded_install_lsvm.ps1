@@ -126,7 +126,6 @@ if (-not $?) {
 }
 
 # Send lsvmtools to VM
-Write-Host "\n#1#$sshKey\n#2#${ipv4}\n"
 
 $fileExtension = .\bin\plink.exe -i ssh\$sshKey root@${ipv4} "dos2unix utils.sh && . utils.sh && GetOSVersion && echo `$os_PACKAGE"
 Write-Output "$fileExtension file will be sent to VM" | Tee-Object -Append -file $summaryLog
@@ -154,27 +153,29 @@ else {
 Start-sleep -s 3
 
 # Stopping VM to take a checkpoint
-Write-Host "Waiting for VM $vmName to stop..."
+Write-Output "Waiting for VM $vmName to stop..." | Tee-Object -Append -file $summaryLog
 if ((Get-VM -ComputerName $hvServer -Name $vmName).State -ne "Off") {
+    Write-Object "Turning off... Server: $hvServer VM: $vmName" | Tee-Object -Append -file $summaryLog
     Stop-VM -ComputerName $hvServer -Name $vmName -Force -Confirm:$false
 }
 
 # Waiting until the VM is off
 if (-not (WaitForVmToStop $vmName $hvServer 300)) {
-    Write-Output "Error: Unable to stop VM"
+    Write-Output "Error: Unable to stop VM" | Tee-Object -Append -file $summaryLog
     return $False
 }
 
+Write-Output "Removing passthough disk." | Tee-Object -Append -file $summaryLog
 # Remove Passthrough disk
 Remove-VMHardDiskDrive -ComputerName $hvServer -VMName $vmName -ControllerType SCSI -ControllerNumber 0 -ControllerLocation 1
 
 # Take checkpoint
 Checkpoint-VM -Name $vmName -SnapshotName $snapshot -ComputerName $hvServer
 if (-not $?) {
-    Write-Output "Error taking snapshot!" | Out-File -Append $summaryLog
+    Write-Output "Error taking snapshot!" | Tee-Object -Append -file $summaryLog
     return $False
 }
 else {
-    Write-Output "Checkpoint was created"
+    Write-Output "Checkpoint was created" | Tee-Object -Append -file $summaryLog
     return $true
 }
