@@ -99,7 +99,7 @@ else {
     return $false
 }
 
-$summaryLog = "${vmName}_summary.log"
+$summaryLog = "c:\users\public\shielded_install_lsvm_summary.log"
 del $summaryLog -ErrorAction SilentlyContinue
 Write-Output "This script covers test case: ${TC_COVERED}" | Tee-Object -Append -file $summaryLog
 
