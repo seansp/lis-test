@@ -132,7 +132,8 @@ $fileExtension = .\bin\plink.exe -i ssh\$sshKey root@${ipv4} "dos2unix utils.sh 
 Write-Output "$fileExtension file will be sent to VM" | Tee-Object -Append -file $summaryLog
 
 $filePath = Get-ChildItem * -Filter *.${fileExtension}
-SendFileToVM $ipv4 $sshKey $filePath.FullName "/tmp/"
+Write-Host "##RelativeSend .\${$filePath.Name}"
+SendFileToVM $ipv4 $sshKey ".\${$filePath.Name}" "/tmp/"
 
 # Install lsvmtools
 if ($fileExtension -eq "deb") {

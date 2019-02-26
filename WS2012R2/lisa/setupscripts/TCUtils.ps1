@@ -759,8 +759,7 @@ function SendFileToVM([String] $ipv4, [String] $sshkey, [string] $localFile, [st
 
     # get around plink questions
     echo y | bin\plink.exe -i ssh\${sshKey} root@${ipv4} "exit 0"
-    Write-Host "##:SendToFile:Now-With-Enclosing-Quotes: '${localFile}'"
-    $process = Start-Process bin\pscp -ArgumentList "-i ssh\${sshKey} '${localFile}' root@${ipv4}:${remoteFile}" `
+    $process = Start-Process bin\pscp -ArgumentList "-i ssh\${sshKey} ${localFile} root@${ipv4}:${remoteFile}" `
 	 -PassThru -NoNewWindow -Wait -redirectStandardOutput lisaOut_${ipv4}.tmp -redirectStandardError lisaErr_${ipv4}.tmp
     if ($process.ExitCode -eq 0)
     {
