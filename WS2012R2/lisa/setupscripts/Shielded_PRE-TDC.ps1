@@ -148,6 +148,19 @@ function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path
     return $sts[-1]
 }
 
+
+
+function UploadFileToIP( [string] $ipv4, [string] $ssh, [string] $localPath, [string] $remotePath )
+{
+    $remote = $(Write-Output "n" | .\bin\pscp.exe -i .\ssh\${ssh} ${localPath} root@${ipv4}:${remotePath})
+    $remote
+}
+function ExecuteCommandOnIP( [string] $ipv4, [string] $ssh, [string] $command )
+{
+    $remote = $(Write-Output "n" | .\bin\plink.exe -i .\ssh\${ssh} root@${ipv4} "$command")
+    $remote
+}
+
 function Actual_Shielded_Install ([String] $vmName, [String] $hvServer, [String] $testParams)
 {
     #############################################################
@@ -208,9 +221,7 @@ function Actual_Shielded_Install ([String] $vmName, [String] $hvServer, [String]
         return $false
     }
     
-    $persistentSummaryLog = "c:\users\public\shielded_install_lsvm_summary.log"
     Write-Host "This script covers test case: ${TC_COVERED} : $([DateTime]::Now)"
-    
     # Copy lsvmtools to root folder
     Test-Path $lsvm_folder
     if (-not $?) {
@@ -220,7 +231,11 @@ function Actual_Shielded_Install ([String] $vmName, [String] $hvServer, [String]
     
     $rpm = Get-ChildItem $lsvm_folder -Filter *.rpm
     $deb = Get-ChildItem $lsvm_folder -Filter *.deb
+
     
+    Write-Host "$rpm <-- RPM"
+    Write-Host "$deb <-- DEB"
+
     Copy-Item -Path $rpm.FullName -Destination . -Force
     if (-not $?) {
         Write-Host "Error: Failed to copy rpm from $lsvm_folder to $rootDir : $([DateTime]::Now)"
@@ -235,10 +250,19 @@ function Actual_Shielded_Install ([String] $vmName, [String] $hvServer, [String]
     
     # Send lsvmtools to VM
     
+
+    Write-Host "Try mine."
+    $ext = ExecuteCommandOnIP -ipv4 $ipv4 -ssh $sshKey -command ". utils.sh && GetOSVersion && echo `$os_PACKAGE"
+
+
+
     $fileExtension = .\bin\plink.exe -i ssh\$sshKey root@${ipv4} "dos2unix utils.sh && . utils.sh && GetOSVersion && echo `$os_PACKAGE"
     Write-Host "$fileExtension file will be sent to VM : $([DateTime]::Now)"
-    
-    $filePath = Get-ChildItem * -Filter *.${fileExtension}
+
+    Write-Host "$rpm <-- RPM"
+    UploadFileToIP -ipv4 $ipv4 -ssh $ssh -localPath $rpm -remotePath "/tmp/lsvm1.deb"
+
+    $filePath = Get-ChildItem * -Filter *.$fileExtension
     Write-Host "##RelativeSend .\${$filePath.Name}"
     SendFileToVM $ipv4 $sshKey ".\${$filePath.Name}" "/tmp/"
     
@@ -263,7 +287,7 @@ function Actual_Shielded_Install ([String] $vmName, [String] $hvServer, [String]
     # Stopping VM to take a checkpoint
     Write-Host "Waiting for VM $vmName to stop... : $([DateTime]::Now)"
     if ((Get-VM -ComputerName $hvServer -Name $vmName).State -ne "Off") {
-        Write-Object "Turning off... Server: $hvServer VM: $vmName : $([DateTime]::Now)"
+        Write-Host "Turning off... Server: $hvServer VM: $vmName : $([DateTime]::Now)"
         Stop-VM -ComputerName $hvServer -Name $vmName -Force -Confirm:$false
     }
     
