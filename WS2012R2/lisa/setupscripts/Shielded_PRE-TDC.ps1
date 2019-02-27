@@ -135,9 +135,10 @@ function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path
     Write-Host "##Shielded_install_psvm.ps1 ::Shielded_PRE-TDC hvServer=localhost .. $testParams";
     Write-Host "##"
     $testParams = "rootDir=${rootDir}; lsvm_folder_path=${lsvm_folder_path}; ipv4=${ipv4}; sshKey=${sshKey}; snapshotName=ICABase"
-    $sts = ./setupScripts/Shielded_install_lsvm.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams $testParams
+    ##$sts = ./setupScripts/Shielded_install_lsvm.ps1 -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams $testParams
+    $sts = Actual_Shielded_Install -vmName 'Shielded_PRE-TDC' -hvServer 'localhost' -testParams $testParams
     if (-not $sts[-1]) {
-        Write-Host "##ReturningFALSE"
+        Write-Host "##ReturningFALSE -- $sts"
         return $false
     }
     foreach( $element in $sts )
@@ -146,6 +147,148 @@ function Install_lsvm ([string]$sshKey, [string]$ipv4, [string]$lsvm_folder_path
     }
     return $sts[-1]
 }
+
+function Actual_Shielded_Install ([String] $vmName, [String] $hvServer, [String] $testParams)
+{
+    #############################################################
+    #
+    # Main script body
+    #
+    #############################################################
+    
+    $retVal = $false
+    if ($vmName -eq $null) {
+        "Error: VM name is null"
+        return $retVal
+    }
+    
+    if ($hvServer -eq $null) {
+        "Error: hvServer is null"
+        return $retVal
+    }
+    
+    $params = $testParams.Split(";")
+    foreach ($p in $params) {
+        $fields = $p.Split("=")
+        
+        switch ($fields[0].Trim()) {
+            "TC_COVERED" { $TC_COVERED = $fields[1].Trim() }
+            "rootDir"   { $rootDir = $fields[1].Trim() }
+            "sshKey" { $sshKey  = $fields[1].Trim() }
+            "ipv4"   {$ipv4 = $fields[1].Trim()}
+            "lsvm_folder_path"   {$lsvm_folder = $fields[1].Trim()}
+            "snapshotName" { $snapshot = $fields[1].Trim() }
+            default  {}
+        }
+    }
+    
+    if ($null -eq $sshKey) {
+        "Error: Test parameter sshKey was not specified"
+        return $False
+    }
+    
+    if ($null -eq $ipv4) {
+        "Error: Test parameter ipv4 was not specified"
+        return $False
+    }
+    
+    if (-not $rootDir) {
+        "Warn : rootdir was not specified"
+    }
+    else {
+        Set-Location $rootDir
+    }
+    
+    # Source TCUitls.ps1 for getipv4 and other functions
+    if (Test-Path ".\setupScripts\TCUtils.ps1") {
+        . .\setupScripts\TCUtils.ps1
+    }
+    else {
+        "ERROR: Could not find setupScripts\TCUtils.ps1"
+        return $false
+    }
+    
+    $persistentSummaryLog = "c:\users\public\shielded_install_lsvm_summary.log"
+    Write-Host "This script covers test case: ${TC_COVERED} : $([DateTime]::Now)"
+    
+    # Copy lsvmtools to root folder
+    Test-Path $lsvm_folder
+    if (-not $?) {
+        Write-Host "Error: Folder $lsvm_folder does not exist! : $([DateTime]::Now)"
+        return $false
+    }
+    
+    $rpm = Get-ChildItem $lsvm_folder -Filter *.rpm
+    $deb = Get-ChildItem $lsvm_folder -Filter *.deb
+    
+    Copy-Item -Path $rpm.FullName -Destination . -Force
+    if (-not $?) {
+        Write-Host "Error: Failed to copy rpm from $lsvm_folder to $rootDir : $([DateTime]::Now)"
+        return $false
+    }
+    
+    Copy-Item -Path $deb.FullName -Destination . -Force
+    if (-not $?) {
+        Write-Host "Error: Failed to copy deb from $lsvm_folder to $rootDir : $([DateTime]::Now)"
+        return $false
+    }
+    
+    # Send lsvmtools to VM
+    
+    $fileExtension = .\bin\plink.exe -i ssh\$sshKey root@${ipv4} "dos2unix utils.sh && . utils.sh && GetOSVersion && echo `$os_PACKAGE"
+    Write-Host "$fileExtension file will be sent to VM : $([DateTime]::Now)"
+    
+    $filePath = Get-ChildItem * -Filter *.${fileExtension}
+    Write-Host "##RelativeSend .\${$filePath.Name}"
+    SendFileToVM $ipv4 $sshKey ".\${$filePath.Name}" "/tmp/"
+    
+    # Install lsvmtools
+    if ($fileExtension -eq "deb") {
+        SendCommandToVM $ipv4 $sshKey "cd /tmp && dpkg -i lsvm*"    
+    }
+    if ($fileExtension -eq "rpm") {
+        SendCommandToVM $ipv4 $sshKey "cd /tmp && rpm -ivh lsvm*"    
+    }
+    
+    if (-not $?) {
+        Write-Host "Error: Failed to install $fileExtension file : $([DateTime]::Now)"
+        return $false
+    } 
+    else {
+        Write-Host "lsvmtools was successfully installed! : $([DateTime]::Now)"
+    }
+    
+    Start-sleep -s 3
+    
+    # Stopping VM to take a checkpoint
+    Write-Host "Waiting for VM $vmName to stop... : $([DateTime]::Now)"
+    if ((Get-VM -ComputerName $hvServer -Name $vmName).State -ne "Off") {
+        Write-Object "Turning off... Server: $hvServer VM: $vmName : $([DateTime]::Now)"
+        Stop-VM -ComputerName $hvServer -Name $vmName -Force -Confirm:$false
+    }
+    
+    # Waiting until the VM is off
+    if (-not (WaitForVmToStop $vmName $hvServer 300)) {
+        Write-Host "Error: Unable to stop VM : $([DateTime]::Now)"
+        return $False
+    }
+    
+    Write-Host "Removing passthough disk. : $([DateTime]::Now)"
+    # Remove Passthrough disk
+    Remove-VMHardDiskDrive -ComputerName $hvServer -VMName $vmName -ControllerType SCSI -ControllerNumber 0 -ControllerLocation 1
+    
+    # Take checkpoint
+    Checkpoint-VM -Name $vmName -SnapshotName $snapshot -ComputerName $hvServer
+    if (-not $?) {
+        Write-Host "Error taking snapshot! : $([DateTime]::Now)"
+        return $False
+    }
+    else {
+        Write-Host "Checkpoint was created : $([DateTime]::Now)"
+        return $true
+    }    
+}
+
 
 # Attach decryption drive to the test VM
 function DettachDecryptVHDx
