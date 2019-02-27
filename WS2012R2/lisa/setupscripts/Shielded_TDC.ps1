@@ -24,6 +24,8 @@
 
 function Get_Full_VHD_Path([string] $vhd_name)
 {
+
+    Write-Host ">> Get_Full_VHD_Path( $vhd_name )"
     $hostInfo = Get-VMHost
     if (-not $hostInfo) {
         return $false
@@ -80,11 +82,18 @@ function CleanupDependency ([string]$vmName)
 
 function Run_TDC ([string] $vhd_path, $signcert)
 {	
+    Write-Host ">> Run_TDC( vhdpath=${vhd_path}, signcert=${signcert} )"
+
     # Make the Template
 	try {
+        Write-Host "Calling Protect-Template-Disk"
 		Protect-TemplateDisk -Path $vhd_path -TemplateName "Shielded_TDC-Testing" -Version '1.0.0.0' -Certificate $signcert -ProtectedTemplateTargetDiskType 'PreprocessedLinux'
 	}
-	catch {
+    Catch
+    {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Host "EXCEPTION: ErrorMessage=${ErrorMessage} .. FailedItem=${FailedItem}"
 		return $false
 	}
     
