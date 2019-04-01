@@ -7,12 +7,12 @@ function Cleanup-VM ([string]$vmName)
     if( $vm )
     {
         Write-Host "VM $vmName -- exists."
-        $hd = $vm.HardDrives[0].Path
-        Write-Host "Hard Drive Location -- $hd"
-        Write-Host "Stopping VM"
+        #$hd = $vm.HardDrives[0].Path
+        #Write-Host "Hard Drive Location -- $hd"
+        Write-Host "Stopping VM and Removing"
         Stop-VM $vm -TurnOff -ErrorAction SilentlyContinue
         Remove-VM $vm -Confirm:$false -Force -ErrorAction SilentlyContinue
-        Remove-Item -Path $hd -Force
+        #Remove-Item -Path $hd -Force
     }
 }
 
