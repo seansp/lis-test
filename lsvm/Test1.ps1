@@ -13,6 +13,6 @@ Copy-Item -Destination $pathToDecryptionVHD -Path $decryptSource -Force
 #Copy the test drive.
 $testDriveSource = "D:\WSSCFS\VHD\Cloudbase\Shielded_Encrypted_VHDs\ubuntu1604_encrypted.vhdx"
 $pathToTestVHD = "..\testVHD.vhdx"
-Copy-Item -Destination $pathToDecryptionVHD -Path $decryptSource -Force
+Copy-Item -Destination $pathToTestVHD -Path $testDriveSource -Force
 
 dir ..
